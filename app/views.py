@@ -31,7 +31,7 @@ def uploads():
         ))
         
         response = {
-            'message': 'File Upload Successful',
+            'message': 'File Upload Successful!',
             'filename': filename,
             'description': description,
         }
@@ -41,7 +41,6 @@ def uploads():
             'errors': form_errors(form)
         }
         
-    print(response)
     return jsonify(response)
     
 

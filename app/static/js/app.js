@@ -12,6 +12,9 @@ Vue.component('app-header', {
           <li class="nav-item active">
             <router-link class="nav-link" to="/">Home <span class="sr-only">(current)</span></router-link>
           </li>
+          <li class="nav-item">
+            <router-link class="nav-link" to="/upload">Upload</router-link>
+          </li>
         </ul>
       </div>
     </nav>
@@ -86,14 +89,19 @@ const UploadForm = Vue.component('upload-form', {
                 return response.json();
             })
             .then(function(jsonResponse) {
-                // display a success message
-                console.log(jsonResponse);
+                console.log(jsonResponse)
             })
             .catch(function(error) {
                 console.log(error)
             })
         }
-    }
+    },
+    data: function() {
+        return {
+            errors: [],
+            message: ''
+        }
+    },
 })
 
 // Define Routes
