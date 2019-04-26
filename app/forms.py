@@ -31,3 +31,15 @@ class PostForm(FlaskForm):
     user_id = StringField('user_id', validators=[InputRequired()])
     photo = FileField('photo', validators=[FileRequired(), FileAllowed(['jpg', 'png', 'Only images are accepted'])])
     caption = StringField('caption', validators=[InputRequired()])
+    
+class FollowForm(FlaskForm):
+    class Meta:
+        csrf = False
+
+    follower_id = StringField('follower_id', validators=[InputRequired()])
+    
+class LikeForm(FlaskForm):
+    class Meta:
+        csrf = False
+        
+    user_id = StringField('post_id', validators=[InputRequired()])

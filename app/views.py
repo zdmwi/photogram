@@ -3,8 +3,8 @@ import jwt
 from functools import wraps
 from flask import render_template, request, jsonify
 from app import app, db, csrf
-from app.forms import RegisterForm, LoginForm, PostForm
-from app.models import User, Post
+from app.forms import RegisterForm, LoginForm, PostForm, FollowForm, LikeForm
+from app.models import User, Post, Follow, Like
 from werkzeug.utils import secure_filename
 
 ###
@@ -46,7 +46,7 @@ def login_required(f):
 ###
 
 @app.route('/api/users/register', methods=['POST'])
-# @csrf.exempt
+@csrf.exempt
 def register():
     form = RegisterForm()
     
@@ -108,6 +108,7 @@ def logout():
     response = {'message': 'User successfully logged out!'}
     return jsonify(response), 200
 
+
 @app.route('/api/users/<user_id>/posts', methods=['GET', 'POST'])
 @login_required
 @csrf.exempt
@@ -142,7 +143,62 @@ def posts(user_id):
         
     return jsonify(response[0]), response[1]
     
+ 
+@app.route('/api/users/<user_id>/follow', methods=['POST'])
+@login_required
+@csrf.exempt
+def follow(user_id):
+    form = FollowForm()
     
+    if form.validate_on_submit():
+        follower_id = form.follower_id.data
+        
+        follow = Follow(user_id, follower_id)
+        
+        db.session.add(follow)
+        db.session.commit()
+        
+        response = {'message': 'You are now following that user.'}, 200
+    
+    else:
+        response = {'errors': form_errors(form)}, 400
+        
+    return jsonify(response[0]), response[1]
+ 
+
+@app.route('/api/posts', methods=['GET'])
+@login_required
+@csrf.exempt
+def all_posts():
+    posts = Post.query.all()
+    response_set = [{'user_id': post.user_id, 'photo': post.photo, 'caption': post.caption} for post in posts]
+    response = {'posts': response_set}
+    return jsonify(response), 200
+
+
+@app.route('/api/posts/<post_id>/like', methods=['POST'])
+@login_required
+@csrf.exempt
+def like_post(post_id):
+    form = LikeForm()
+    
+    if form.validate_on_submit():
+        user_id = form.user_id.data
+        
+        like = Like(user_id, post_id)
+        
+        db.session.add(like)
+        db.session.commit()
+        
+        likes = Like.query.filter_by(post_id=post_id).all()
+        response = {'message': 'Post liked!', 'likes': len(likes)}, 201
+        
+    else:
+        response = {'errors': form_errors(form)}, 400
+        
+    return jsonify(response[0]), response[1]
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
