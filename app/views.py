@@ -1,10 +1,45 @@
 import os
-import json
-from flask import render_template, jsonify
+import jwt
+from functools import wraps
+from flask import render_template, request, jsonify
 from app import app, db, csrf
-from app.forms import RegisterForm, LoginForm
-from app.models import User
+from app.forms import RegisterForm, LoginForm, PostForm
+from app.models import User, Post
 from werkzeug.utils import secure_filename
+
+###
+# Utility functions
+###
+
+def login_required(f):
+  @wraps(f)
+  def decorated(*args, **kwargs):
+    auth = request.headers.get('Authorization', None)
+    if not auth:
+      return jsonify({'code': 'authorization_header_missing', 'description': 'Authorization header is expected'}), 401
+
+    parts = auth.split()
+
+    if parts[0].lower() != 'bearer':
+      return jsonify({'code': 'invalid_header', 'description': 'Authorization header must start with Bearer'}), 401
+    elif len(parts) == 1:
+      return jsonify({'code': 'invalid_header', 'description': 'Token not found'}), 401
+    elif len(parts) > 2:
+      return jsonify({'code': 'invalid_header', 'description': 'Authorization header must be Bearer + \s + token'}), 401
+
+    token = parts[1]
+    try:
+         payload = jwt.decode(token, app.config['SECRET_KEY'])
+
+    except jwt.ExpiredSignature:
+        return jsonify({'code': 'token_expired', 'description': 'token is expired'}), 401
+    except jwt.DecodeError:
+        return jsonify({'code': 'token_invalid_signature', 'description': 'Token signature is invalid'}), 401
+
+    # g.current_user = user = payload
+    return f(*args, **kwargs)
+
+  return decorated
 
 ###
 # API endpoints
@@ -56,7 +91,8 @@ def login():
         
         if user:
             if user.password == password:
-                response = {'token': 'tbd', 'message': 'User successfully logged in!'}, 200
+                token = jwt.encode({'id': user.id, 'username': username}, app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+                response = {'token': token, 'message': 'User successfully logged in!'}, 200
             else:
                 response = {'errors': ['Incorrect username or password!']}, 400
         else:
@@ -67,6 +103,46 @@ def login():
     return jsonify(response[0]), response[1]
 
 
+@app.route('/api/auth/logout', methods=['GET'])
+def logout():
+    response = {'message': 'User successfully logged out!'}
+    return jsonify(response), 200
+
+@app.route('/api/users/<user_id>/posts', methods=['GET', 'POST'])
+@login_required
+@csrf.exempt
+def posts(user_id):
+    if request.method == 'POST':
+        
+        form = PostForm()
+        if form.validate_on_submit():
+            user_id = form.user_id.data
+            caption = form.caption.data
+            
+            photo = form.photo.data
+            filename = photo.filename
+            photo.save(os.path.join(
+                app.config['UPLOAD_FOLDER'], filename
+            ))
+            
+            
+            post = Post(user_id, filename, caption)
+            
+            db.session.add(post)
+            db.session.commit()
+            
+            response = {'message': 'Successfully created a post!'}, 200
+        else:
+            response = {'errors': form_errors(form)}, 400
+            
+    else:
+        posts = Post.query.filter_by(user_id=user_id).all()
+        response_set = [{'user_id': post.user_id, 'photo': post.photo, 'caption': post.caption} for post in posts]
+        response = {'posts': response_set}, 200
+        
+    return jsonify(response[0]), response[1]
+    
+    
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
@@ -84,7 +160,6 @@ def form_errors(form):
             error_messages.append(message)
 
     return error_messages
-
 
 ###
 # The functions below should be applicable to all Flask apps.

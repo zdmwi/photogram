@@ -5,6 +5,9 @@ from wtforms.validators import InputRequired, Email
 
 
 class RegisterForm(FlaskForm):
+    class Meta:
+        csrf = False
+        
     username = StringField('username', validators=[InputRequired()])
     password = StringField('password', validators=[InputRequired()])
     firstname = StringField('firstname', validators=[InputRequired()])
@@ -20,3 +23,11 @@ class LoginForm(FlaskForm):
         
     username = StringField('username', validators=[InputRequired()])
     password = StringField('password', validators=[InputRequired()])
+    
+class PostForm(FlaskForm):
+    class Meta:
+        csrf = False
+        
+    user_id = StringField('user_id', validators=[InputRequired()])
+    photo = FileField('photo', validators=[FileRequired(), FileAllowed(['jpg', 'png', 'Only images are accepted'])])
+    caption = StringField('caption', validators=[InputRequired()])
