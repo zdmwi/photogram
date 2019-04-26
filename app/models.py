@@ -1,7 +1,7 @@
 import datetime
 from . import db
 
-class Posts(db.Model):
+class Post(db.Model):
     __tablename__ = 'posts'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -15,7 +15,7 @@ class Posts(db.Model):
         self.photo = photo
         self.caption = caption
         
-class Users(db.Model):
+class User(db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -41,7 +41,9 @@ class Users(db.Model):
                 self.biography = biography
                 self.profile_photo = profile_photo
     
-class Likes(db.Model):
+class Like(db.Model):
+    __tablename__ = 'likes'
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)
     post_id = db.Column(db.Integer)
@@ -51,7 +53,9 @@ class Likes(db.Model):
         self.post_id = post_id
         
 
-class Follows(db.Model):
+class Follow(db.Model):
+    __tablename__ = 'follows'
+    
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)
     follower_id = db.Column(db.Integer)

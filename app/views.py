@@ -1,71 +1,80 @@
-"""
-Flask Documentation:     http://flask.pocoo.org/docs/
-Jinja2 Documentation:    http://jinja.pocoo.org/2/documentation/
-Werkzeug Documentation:  http://werkzeug.pocoo.org/documentation/
-This file creates your application.
-"""
-
 import os
 import json
-from flask import render_template, request, jsonify
-from app import app
-from app.forms import UploadForm
+from flask import render_template, jsonify
+from app import app, db, csrf
+from app.forms import RegisterForm, LoginForm
+from app.models import User
 from werkzeug.utils import secure_filename
 
 ###
-# Routing for your application.
+# API endpoints
 ###
 
-@app.route('/api/upload', methods=['POST'])
-def uploads():
-    form = UploadForm()
+@app.route('/api/users/register', methods=['POST'])
+# @csrf.exempt
+def register():
+    form = RegisterForm()
     
-    if request.method == 'POST' and form.validate_on_submit():
+    if form.validate_on_submit():
+        username = form.username.data
+        firstname = form.firstname.data
+        lastname = form.lastname.data
+        password = form.password.data
+        email = form.email.data
+        location = form.location.data
+        biography = form.biography.data
+        profile_photo = form.profile_photo.data
         
-        description = form.description.data
-        photo = form.photo.data
-        
-        filename = secure_filename(photo.filename)
-        photo.save(os.path.join(
+        filename = secure_filename(profile_photo.filename)
+        profile_photo.save(os.path.join(
             app.config['UPLOAD_FOLDER'], filename    
         ))
         
-        response = {
-            'message': 'File Upload Successful!',
-            'filename': filename,
-            'description': description,
-        }
+        user = User(username, password, firstname, lastname, email, location, biography, filename)
         
+        db.session.add(user)
+        db.session.commit()
+ 
+        response = { 'message': 'User registered successfully!'}, 201
     else:
-        response = {
-            'errors': form_errors(form)
-        }
+        response = { 'errors': form_errors(form) }, 400
         
-    return jsonify(response)
+    return jsonify(response[0]), response[1]
     
 
+@app.route('/api/auth/login', methods=['POST'])
+@csrf.exempt
+def login():
+    form = LoginForm()
+    
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+        
+        # find a user with the same username and try to match the passwords
+        user = User.query.filter_by(username=username).first()
+        
+        if user:
+            if user.password == password:
+                response = {'token': 'tbd', 'message': 'User successfully logged in!'}, 200
+            else:
+                response = {'errors': ['Incorrect username or password!']}, 400
+        else:
+            response = {'errors': ['Incorrect username or password!']}, 400
+    else:
+        response = {'errors': form_errors(form)}, 400
+    
+    return jsonify(response[0]), response[1]
 
-# Please create all new routes and view functions above this route.
-# This route is now our catch all route for our VueJS single page
-# application.
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
-    """
-    Because we use HTML5 history mode in vue-router we need to configure our
-    web server to redirect all routes to index.html. Hence the additional route
-    "/<path:path".
-
-    Also we will render the initial webpage and then let VueJS take control.
-    """
     return render_template('index.html')
 
 
-# Here we define a function to collect form errors from Flask-WTF
-# which we can later use
 def form_errors(form):
     error_messages = []
-    """Collects form errors"""
     for field, errors in form.errors.items():
         for error in errors:
             message = u"Error in the %s field - %s" % (
@@ -84,18 +93,12 @@ def form_errors(form):
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):
-    """Send your static text file."""
     file_dot_text = file_name + '.txt'
     return app.send_static_file(file_dot_text)
 
 
 @app.after_request
 def add_header(response):
-    """
-    Add headers to both force latest IE rendering engine or Chrome Frame,
-    and also tell the browser not to cache the rendered page. If we wanted
-    to we could change max-age to 600 seconds which would be 10 minutes.
-    """
     response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
     response.headers['Cache-Control'] = 'public, max-age=0'
     return response
@@ -103,7 +106,6 @@ def add_header(response):
 
 @app.errorhandler(404)
 def page_not_found(error):
-    """Custom 404 page."""
     return render_template('404.html'), 404
 
 
