@@ -6,6 +6,7 @@ from app import app, db, csrf
 from app.forms import RegisterForm, LoginForm, PostForm, FollowForm, LikeForm
 from app.models import User, Post, Follow, Like
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash
 
 ###
 # Utility functions
@@ -98,7 +99,7 @@ def login():
         user = User.query.filter_by(username=username).first()
         
         if user:
-            if user.password == password:
+            if check_password_hash(user.password, password):
                 token = jwt.encode({'id': user.id, 'username': username}, app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
                 response = {'token': token, 'message': 'User successfully logged in!'}, 200
             else:
@@ -111,6 +112,7 @@ def login():
     return jsonify(response[0]), response[1]
 
 @app.route('/api/auth/logout', methods=['GET'])
+@login_required
 def logout():
     response = {'message': 'User successfully logged out!'}
     return jsonify(response), 200

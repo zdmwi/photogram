@@ -10,28 +10,36 @@ Vue.component('app-header', {
       </button>
     
       <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
+        <ul class="navbar-nav ml-auto">
           <li class="nav-item active">
-            <router-link class="nav-link" to="/">Home <span class="sr-only">(current)</span></router-link>
+            <router-link class="nav-link font-weight-bold" to="/">Home <span class="sr-only">(current)</span></router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/explore">Explore</router-link>
+            <router-link class="nav-link font-weight-bold" to="/explore">Explore</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" :to="profileUrl">My Profile</router-link>
+            <span class="nav-link font-weight-bold pseudo-link" @click="goToMyProfile">My Profile</span>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/logout">Logout</router-link>
+            <router-link class="nav-link font-weight-bold" to="/logout">Logout</router-link>
           </li>
         </ul>
       </div>
     </nav>
     `,
+    methods: {
+        goToMyProfile: function() {
+            let userId;
+            try {
+                userId = jwt_decode(localStorage.getItem('token')).id;
+                router.push('/users/' + userId);
+            } catch(e) {
+                router.push({name: 'login', params: {notification: 'You need to be logged in to view this page.'}})
+            }
+        }  
+    },
     data: function() {
-        return {
-            userId: null,
-            profileUrl: '/users/' +  jwt_decode(localStorage.getItem('token')).id,
-        }
+        return {}
     }
 });
 
@@ -47,26 +55,30 @@ Vue.component('app-footer', {
 
 const Home = Vue.component('home', {
     template: `
-    <div class="d-flex flex-row justify-content-around">
-        <img :src=imgUrl class="shadow-sm bg-white rounded">
-        
-        <div class="shadow-sm p-4 mb-5 bg-white rounded">
-            <div class="logo-brand d-flex flex-row justify-content-center align-items-center">
-                <span style="font-size: 25px;"><i class="fab fa-instagram mr-1"></i></span>
-                <h3>Photogram</h3>
-            </div>
-            <hr>
-            <p>Share photos of your favorite moments with friends, family and the world.</p>
-            <div class="d-flex flex-row justify-content-center">
-                <router-link class="nav-link btn btn-green font-weight-bold mr-1 w-25" to="/register">Register</router-link>
-                <router-link class="nav-link btn btn-blue font-weight-bold ml-1 w-25" to="/login">Login</router-link>
+    <div class="d-flex flex-column mt-4 pt-4">
+        <div v-if="notification" class="alert alert-success alert-dismissible show fade">{{ notification }}</div>
+        <div class="d-flex flex-row justify-content-center align-items-center">
+            <img :src=imgUrl class="shadow-sm bg-white rounded mr-1">
+            
+            <div class="shadow-sm p-3 bg-white rounded ml-1 home-card">
+                <div class="logo-brand d-flex flex-row justify-content-center">
+                    <span style="font-size: 25px;"><i class="fab fa-instagram mr-1"></i></span>
+                    <h3>Photogram</h3>
+                </div>
+                <hr>
+                <p class="mb-4">Share photos of your favorite moments with friends, family and the world.</p>
+                <div class="d-flex flex-row justify-content-center mt-4">
+                    <router-link class="nav-link btn btn-sm btn-green font-weight-bold mr-1 w-50" to="/register">Register</router-link>
+                    <router-link class="nav-link btn btn-sm btn-blue font-weight-bold ml-1 w-50" to="/login">Login</router-link>
+                </div>
             </div>
         </div>
     </div>
     `,
+    props: ['notification'],
     created: function() {
         let self = this;
-        self.imgUrl = 'https://picsum.photos/450';
+        self.imgUrl = 'https://picsum.photos/400';
     },
     data: function() {
        return {
@@ -79,6 +91,12 @@ const RegisterForm = Vue.component('register-form', {
     template: `
     <div class="d-flex flex-column justify-content-center align-items-center">
         <h1 class='mb-4 menu-title'>Register</h1>
+        
+        <ul class="d-flex flex-column justify-content-center align-items-center w-25">
+            <li v-for="error in errors" class="alert alert-danger alert-dismissible fade show">
+                {{ error }}
+            </li>
+        </ul>
         
         <div class="shadow-sm bg-white p-4 rounded w-25">
         <form id="registerForm" @submit.prevent='registerUser' enctype='multipart/form-data' novalidate>
@@ -123,6 +141,8 @@ const RegisterForm = Vue.component('register-form', {
     `,
     methods: {
         registerUser: function() {
+            let self = this;
+            
             let registerForm = document.getElementById('registerForm');
             let formData = new FormData(registerForm);
             
@@ -137,9 +157,15 @@ const RegisterForm = Vue.component('register-form', {
             .then(function(response) {
                 return response.json();
             })
-            .then(function(jsonResponse) {
-                console.log(jsonResponse);
-                router.push({path: '/login'})
+            .then(function(data) {
+                self.errors = data.errors;
+                self.message = data.message;
+                
+                if (self.message) {
+                    router.push({name: 'login', params: {notification: self.message}})
+                } else {
+                    console.log(self.errors);
+                }
             })
             .catch(function(error) {
                 console.log(error)
@@ -158,6 +184,14 @@ const LoginForm = Vue.component('login-form', {
     template: `
     <div class="d-flex flex-column justify-content-center align-items-center">
         <h1 class='mb-4 menu-title'>Login</h1>
+        
+        <ul class="d-flex flex-column justify-content-center align-items-center w-25">
+            <li v-for="error in errors" class="alert alert-danger alert-dismissible fade show">
+                {{ error }}
+            </li>
+        </ul>
+        
+        <div v-if="notification" class="alert alert-success">{{ notification }}</div>
         <div class="shadow-sm bg-white p-4 rounded w-25">
         <form id="loginForm" @submit.prevent='loginUser' enctype='multipart/form-data' novalidate>
             <div class="form-group">
@@ -174,8 +208,11 @@ const LoginForm = Vue.component('login-form', {
         </div>
     </div>
     `,
+    props: ['notification'],
     methods: {
         loginUser: function() {
+            let self = this;
+            
             let loginForm = document.getElementById('loginForm');
             let formData = new FormData(loginForm);
             
@@ -190,10 +227,16 @@ const LoginForm = Vue.component('login-form', {
             .then(function(response) {
                 return response.json();
             })
-            .then(function(jsonResponse) {
-                console.log(jsonResponse);
-                localStorage.setItem('token', jsonResponse.token);
-                router.push({path: '/explore'})
+            .then(function(data) {
+                self.errors = data.errors;
+                self.message = data.message;
+                
+                if (self.message) {
+                    localStorage.setItem('token', data.token);
+                    router.push({path: '/explore'})
+                } else {
+                    console.log(self.errors);
+                }
             })
             .catch(function(error) {
                 console.log(error)
@@ -211,8 +254,33 @@ const LoginForm = Vue.component('login-form', {
 const Logout = Vue.component('logout', {
     template: `<div></div>`,
     created: function () {
-        localStorage.removeItem('token');
-        router.push({path: '/'})
+        let self = this;
+        
+        fetch('/api/auth/logout', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': token,
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            self.errors = data.errors;
+            self.message = data.message;
+            
+            if (self.message) {
+                localStorage.removeItem('token');
+                router.push({name: 'home', params: {notification: self.message}})
+            } else {
+                router.push({name: 'home', params: {notification: 'You need to be logged in to log out silly.'}})
+            }
+        })
+        .catch(function(error) {
+            console.log(error)
+        })
     },
 })
 
@@ -332,18 +400,23 @@ const PostFooter = Vue.component('post-footer', {
 
 const Explore = Vue.component('explore', {
     template: `
-        <div class="d-flex flex-row-reverse justify-content-around align-items-center">
-            <router-link class="nav-link align-self-start btn btn-sm btn-blue w-25 font-weight-bold" to="/posts/new">New Post</router-link>
-            <ul class="d-flex flex-column">
-                <li v-for='post in posts' class="shadow-sm rounded bg-white mb-4">
-                    <post-header v-bind:user-id="post.user_id"></post-header>
-                    <img :src="'static/uploads/' + post.photo" style="height: 400px; width: 500px;">
-                    <p class="p-3 bg-white text-muted">{{post.caption}}</p>
-                    <post-footer v-bind:post-id="post.id" v-bind:date="post.created_on"></post-footer>
-                </li>
-            </ul>
+        <div>
+            <div v-if="error" class="alert alert-danger">{{ error }}</div>
+            <div v-else class="d-flex flex-row-reverse justify-content-around align-items-center">
+                <router-link class="nav-link align-self-start btn btn-sm btn-blue w-25 font-weight-bold" to="/posts/new">New Post</router-link>
+                <ul class="d-flex flex-column">
+                    <div v-if="notification" class="alert alert-success alert-dismissible fade show">{{ notification }}</div>
+                    <li v-for='post in posts' class="shadow-sm rounded bg-white mb-4">
+                        <post-header v-bind:user-id="post.user_id"></post-header>
+                        <img :src="'static/uploads/' + post.photo" style="height: 400px; width: 500px;">
+                        <p class="p-3 bg-white text-muted">{{post.caption}}</p>
+                        <post-footer v-bind:post-id="post.id" v-bind:date="post.created_on"></post-footer>
+                    </li>
+                </ul>
+            </div>
         </div>
     `,
+    props: ['notification'],
     created: function() {
         let self = this;
         
@@ -360,6 +433,9 @@ const Explore = Vue.component('explore', {
         })
         .then(function(data) {
             self.posts = data.posts;
+            if(data.code) {
+                router.push({name: 'login', params: {notification: 'You need to be logged in to view this page.'}})
+            }
         })
         .catch(function(error) {
             console.log(error)
@@ -368,6 +444,7 @@ const Explore = Vue.component('explore', {
     
     data: function () {
         return {
+            error: '',
             posts: []
         }
     }
@@ -486,7 +563,9 @@ const UserProfile = Vue.component('user-profile', {
     template: `
     <div>
         <profile-banner v-bind:user="user" v-bind:posts="user.posts.length"></profile-banner>
-        <profile-gallery v-bind:posts="user.posts"></profile-gallery>
+        <div class="d-flex justify-content-center align-items-center">
+            <profile-gallery v-bind:posts="user.posts"></profile-gallery>
+        </div>
     </div>
     `,
     created: function() {
@@ -521,6 +600,11 @@ const NewPostForm = Vue.component('new-post-form', {
     template: `
         <div class="d-flex flex-column justify-content-center align-items-center">
             <h1 class='mb-4 menu-title'>New Post</h1>
+            <ul class="d-flex flex-column justify-content-center align-items-center w-25">
+                <li v-for="error in errors" class="alert alert-danger alert-dismissible fade show">
+                    {{ error }}
+                </li>
+            </ul>
             <div class="shadow-sm bg-white p-4 rounded w-25">
             <form id="newPostForm" @submit.prevent='makePost' enctype='multipart/form-data' novalidate>
                 <div class='form-group'>
@@ -540,6 +624,8 @@ const NewPostForm = Vue.component('new-post-form', {
     `,
     methods: {
         makePost: function() {
+            let self = this;
+            
             let newPostForm = document.getElementById('newPostForm');
             let formData = new FormData(newPostForm);
             
@@ -558,9 +644,14 @@ const NewPostForm = Vue.component('new-post-form', {
             .then(function(response) {
                 return response.json();
             })
-            .then(function(jsonResponse) {
-                console.log(jsonResponse);
-                router.push({path: '/explore'});
+            .then(function(data) {
+                self.message = data.message;
+                self.errors = data.errors;
+                if (self.message) {
+                    router.push({name: 'explore', params: {notification: self.message}});
+                } else {
+                    console.log(self.errors);
+                }
             })
             .catch(function(error) {
                 console.log(error)
@@ -586,15 +677,14 @@ const NotFound = Vue.component('not-found', {
     }
 })
 
-// Define Routes
 const router = new VueRouter({
     mode: 'history',
     routes: [
-        {path: "/", component: Home},
+        {path: "/", name: "home", component: Home, props: true},
         {path: "/register", component: RegisterForm},
-        {path: "/login", component: LoginForm},
+        {path: "/login", name: "login", component: LoginForm, props: true},
         {path: "/logout", component: Logout},
-        {path: "/explore", component: Explore},
+        {path: "/explore", name: "explore", component: Explore, props: true},
         {path: "/posts/new", component: NewPostForm},
         {path: "/users/:user_id", component: UserProfile},
         // This is a catch all route in case none of the above matches
@@ -602,7 +692,6 @@ const router = new VueRouter({
     ]
 });
 
-// Instantiate our main Vue Instance
 let app = new Vue({
     el: "#app",
     router
