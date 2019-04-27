@@ -46,15 +46,14 @@ def login_required(f):
 ###
 
 @app.route('/api/users/register', methods=['POST'])
-@csrf.exempt
 def register():
     form = RegisterForm()
     
     if form.validate_on_submit():
         username = form.username.data
+        password = form.password.data
         firstname = form.firstname.data
         lastname = form.lastname.data
-        password = form.password.data
         email = form.email.data
         location = form.location.data
         biography = form.biography.data
@@ -78,7 +77,6 @@ def register():
     
 
 @app.route('/api/auth/login', methods=['POST'])
-@csrf.exempt
 def login():
     form = LoginForm()
     
@@ -111,13 +109,11 @@ def logout():
 
 @app.route('/api/users/<user_id>/posts', methods=['GET', 'POST'])
 @login_required
-@csrf.exempt
 def posts(user_id):
     if request.method == 'POST':
         
         form = PostForm()
         if form.validate_on_submit():
-            user_id = form.user_id.data
             caption = form.caption.data
             
             photo = form.photo.data
@@ -128,11 +124,11 @@ def posts(user_id):
             
             
             post = Post(user_id, filename, caption)
-            
+
             db.session.add(post)
             db.session.commit()
             
-            response = {'message': 'Successfully created a post!'}, 200
+            response = {'message': 'Successfully created a post!'}, 201
         else:
             response = {'errors': form_errors(form)}, 400
             
@@ -146,7 +142,6 @@ def posts(user_id):
  
 @app.route('/api/users/<user_id>/follow', methods=['POST'])
 @login_required
-@csrf.exempt
 def follow(user_id):
     form = FollowForm()
     
@@ -168,7 +163,6 @@ def follow(user_id):
 
 @app.route('/api/posts', methods=['GET'])
 @login_required
-@csrf.exempt
 def all_posts():
     posts = Post.query.all()
     response_set = [{'user_id': post.user_id, 'photo': post.photo, 'caption': post.caption} for post in posts]
@@ -178,7 +172,6 @@ def all_posts():
 
 @app.route('/api/posts/<post_id>/like', methods=['POST'])
 @login_required
-@csrf.exempt
 def like_post(post_id):
     form = LikeForm()
     
