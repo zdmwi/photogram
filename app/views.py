@@ -36,10 +36,21 @@ def login_required(f):
     except jwt.DecodeError:
         return jsonify({'code': 'token_invalid_signature', 'description': 'Token signature is invalid'}), 401
 
-    # g.current_user = user = payload
     return f(*args, **kwargs)
 
   return decorated
+
+def form_errors(form):
+    error_messages = []
+    for field, errors in form.errors.items():
+        for error in errors:
+            message = u"Error in the %s field - %s" % (
+                    getattr(form, field).label.text,
+                    error
+                )
+            error_messages.append(message)
+
+    return error_messages
 
 ###
 # API endpoints
@@ -75,7 +86,6 @@ def register():
         
     return jsonify(response[0]), response[1]
     
-
 @app.route('/api/auth/login', methods=['POST'])
 def login():
     form = LoginForm()
@@ -100,12 +110,28 @@ def login():
     
     return jsonify(response[0]), response[1]
 
-
 @app.route('/api/auth/logout', methods=['GET'])
 def logout():
     response = {'message': 'User successfully logged out!'}
     return jsonify(response), 200
 
+@app.route('/api/users/<user_id>', methods=['GET'])
+@login_required
+def get_user(user_id):
+    user = User.query.filter_by(id=user_id).first()
+    user_posts = Post.query.filter_by(user_id=user_id).all()
+    
+    post_set = [{'id': post.id , 'user_id': post.user_id, 
+                'photo': post.photo, 'caption': post.caption, 
+                'created_on': post.created_on} for post in user_posts]
+                
+    user_data = {'id': user.id, 'username': user.username, 
+                'firstname': user.firstname, 'lastname': user.lastname, 
+                'email': user.email, 'location': user.location, 
+                'biography': user.biography, 'profile_photo': user.profile_photo, 
+                'joined_on': user.joined_on.strftime('%B %Y'), 'posts': post_set}
+                
+    return jsonify(user_data), 200
 
 @app.route('/api/users/<user_id>/posts', methods=['GET', 'POST'])
 @login_required
@@ -139,81 +165,79 @@ def posts(user_id):
         
     return jsonify(response[0]), response[1]
     
- 
-@app.route('/api/users/<user_id>/follow', methods=['POST'])
+@app.route('/api/users/<user_id>/follow', methods=['GET', 'POST'])
 @login_required
 def follow(user_id):
-    form = FollowForm()
-    
-    if form.validate_on_submit():
-        follower_id = form.follower_id.data
+    if request.method == 'POST':
+        form = FollowForm()
         
-        follow = Follow(user_id, follower_id)
+        if form.validate_on_submit():
+            follower_id = form.follower_id.data
+            
+            follow = Follow(user_id, follower_id)
+            
+            db.session.add(follow)
+            db.session.commit()
+            
+            response = {'message': 'You are now following that user.'}, 200
         
-        db.session.add(follow)
-        db.session.commit()
-        
-        response = {'message': 'You are now following that user.'}, 200
-    
+        else:
+            response = {'errors': form_errors(form)}, 400
     else:
-        response = {'errors': form_errors(form)}, 400
+        follows = Follow.query.filter_by(user_id=user_id).distinct().all()
+        
+        follow_count  = 0
+        for follow in follows:
+            follow_count += 1
+        
+        response = {'follower_count': follow_count}, 200
         
     return jsonify(response[0]), response[1]
  
-
 @app.route('/api/posts', methods=['GET'])
 @login_required
 def all_posts():
     posts = Post.query.all()
-    response_set = [{'user_id': post.user_id, 'photo': post.photo, 'caption': post.caption} for post in posts]
+    
+    response_set = [{'id': post.id, 'user_id': post.user_id, 'photo': post.photo, 
+                    'caption': post.caption, 'created_on': post.created_on.strftime('%d %B %Y')} for post in posts]
+                    
     response = {'posts': response_set}
     return jsonify(response), 200
 
-
-@app.route('/api/posts/<post_id>/like', methods=['POST'])
+@app.route('/api/posts/<post_id>/like', methods=['GET', 'POST'])
 @login_required
-def like_post(post_id):
-    form = LikeForm()
-    
-    if form.validate_on_submit():
-        user_id = form.user_id.data
+def likes(post_id):
+    if request.method == 'POST':
+        form = LikeForm()
         
-        like = Like(user_id, post_id)
-        
-        db.session.add(like)
-        db.session.commit()
-        
-        likes = Like.query.filter_by(post_id=post_id).all()
-        response = {'message': 'Post liked!', 'likes': len(likes)}, 201
-        
+        if form.validate_on_submit():
+            user_id = form.user_id.data
+            
+            like = Like(user_id, post_id)
+            
+            db.session.add(like)
+            db.session.commit()
+            
+            likes = Like.query.filter_by(post_id=post_id).all()
+            response = {'message': 'Post liked!', 'likes': len(likes)}, 201
+            
+        else:
+            response = {'errors': form_errors(form)}, 400
     else:
-        response = {'errors': form_errors(form)}, 400
+        likes = Like.query.filter_by(post_id=post_id).all()
+        response = {'likes': len(likes)}, 200
         
     return jsonify(response[0]), response[1]
-
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
     return render_template('index.html')
 
-
-def form_errors(form):
-    error_messages = []
-    for field, errors in form.errors.items():
-        for error in errors:
-            message = u"Error in the %s field - %s" % (
-                    getattr(form, field).label.text,
-                    error
-                )
-            error_messages.append(message)
-
-    return error_messages
-
 ###
 # The functions below should be applicable to all Flask apps.
 ###
-
 
 @app.route('/<file_name>.txt')
 def send_text_file(file_name):

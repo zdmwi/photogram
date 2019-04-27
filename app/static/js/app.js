@@ -1,8 +1,10 @@
-/* Add your Application JavaScript */
 Vue.component('app-header', {
     template: `
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-      <a class="navbar-brand" href="#">Photogram</a>
+      <router-link class="navbar-brand logo-brand d-flex flex-row justify-content-center align-items-center" to="/">
+        <span style="font-size: 25px;"><i class="fab fa-instagram mr-1"></i></span>
+        <h4>Photogram</h4>
+      </router-link>
       <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -13,23 +15,29 @@ Vue.component('app-header', {
             <router-link class="nav-link" to="/">Home <span class="sr-only">(current)</span></router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/">Explore</router-link>
+            <router-link class="nav-link" to="/explore">Explore</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/">Profile</router-link>
+            <router-link class="nav-link" :to="profileUrl">My Profile</router-link>
           </li>
           <li class="nav-item">
-            <router-link class="nav-link" to="/">Logout</router-link>
+            <router-link class="nav-link" to="/logout">Logout</router-link>
           </li>
         </ul>
       </div>
     </nav>
-    `
+    `,
+    data: function() {
+        return {
+            userId: null,
+            profileUrl: '/users/' +  jwt_decode(localStorage.getItem('token')).id,
+        }
+    }
 });
 
 Vue.component('app-footer', {
     template: `
-    <footer>
+    <footer hidden>
         <div class="container">
             <p>Copyright &copy; Flask Inc.</p>
         </div>
@@ -38,61 +46,79 @@ Vue.component('app-footer', {
 });
 
 const Home = Vue.component('home', {
-   template: `
-    <div class="jumbotron">
-        <h1>Project 2</h1>
-        <p class="lead">
-            <router-link class="nav-link" to="/register">Register</router-link>
-            <router-link class="nav-link" to="/login">Login</router-link>
-        </p>
+    template: `
+    <div class="d-flex flex-row justify-content-around">
+        <img :src=imgUrl class="shadow-sm bg-white rounded">
+        
+        <div class="shadow-sm p-4 mb-5 bg-white rounded">
+            <div class="logo-brand d-flex flex-row justify-content-center align-items-center">
+                <span style="font-size: 25px;"><i class="fab fa-instagram mr-1"></i></span>
+                <h3>Photogram</h3>
+            </div>
+            <hr>
+            <p>Share photos of your favorite moments with friends, family and the world.</p>
+            <div class="d-flex flex-row justify-content-center">
+                <router-link class="nav-link btn btn-green font-weight-bold mr-1 w-25" to="/register">Register</router-link>
+                <router-link class="nav-link btn btn-blue font-weight-bold ml-1 w-25" to="/login">Login</router-link>
+            </div>
+        </div>
     </div>
-   `,
+    `,
+    created: function() {
+        let self = this;
+        self.imgUrl = 'https://picsum.photos/450';
+    },
     data: function() {
-       return {}
+       return {
+           imgUrl: ''
+       }
     }
 });
 
 const RegisterForm = Vue.component('register-form', {
     template: `
-    <div>
-        <h1 class='mb-4'>Register</h1>
+    <div class="d-flex flex-column justify-content-center align-items-center">
+        <h1 class='mb-4 menu-title'>Register</h1>
+        
+        <div class="shadow-sm bg-white p-4 rounded w-25">
         <form id="registerForm" @submit.prevent='registerUser' enctype='multipart/form-data' novalidate>
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" class="form-control" id="username" name="username">
+                <label for="username" class="font-weight-bold">Username</label>
+                <input type="text" class="form-control form-control-sm" id="username" name="username">
             </div>
             <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password">
+                <label for="password" class="font-weight-bold">Password</label>
+                <input type="password" class="form-control form-control-sm" id="password" name="password">
             </div>
             <div class="form-group">
-                <label for="firstname">Firstname</label>
-                <input type="text" class="form-control" id="firstname" name="firstname">
+                <label for="firstname" class="font-weight-bold">Firstname</label>
+                <input type="text" class="form-control form-control-sm" id="firstname" name="firstname">
             </div>
             <div class="form-group">
-                <label for="lastname">Lastname</label>
-                <input type="text" class="form-control" id="lastname" name="lastname">
+                <label for="lastname" class="font-weight-bold">Lastname</label>
+                <input type="text" class="form-control form-control-sm" id="lastname" name="lastname">
             </div>
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" class="form-control" id="email" name="email">
+                <label for="email" class="font-weight-bold">Email</label>
+                <input type="email" class="form-control form-control-sm" id="email" name="email">
             </div>
             <div class="form-group">
-                <label for="location">Location</label>
-                <input type="text" class="form-control" id="location" name="location">
+                <label for="location" class="font-weight-bold">Location</label>
+                <input type="text" class="form-control form-control-sm" id="location" name="location">
             </div>
             <div class='form-group'>
-                <label for="biography">Description</label>
-                <textarea id="biography" class="form-control" name="biography"></textarea>
+                <label for="biography" class="font-weight-bold">Description</label>
+                <textarea id="biography" class="form-control form-control-sm" name="biography"></textarea>
             </div>
             
             <div class='form-group'>
-                <label for='photo'>Photo</label>
-                <input type='file' id='photo' class='form-control file-input' name='profile_photo'>
+                <label for='photo' class="font-weight-bold">Photo</label>
+                <input type='file' id='photo' class='form-control form-control-sm file-input' name='profile_photo'>
             </div>
             
-            <button type='submit' class='btn btn-primary'>Register</button>
+            <button type='submit' class='btn btn-sm btn-green w-100 font-weight-bold'>Register</button>
         </form>
+        </div>
     </div>
     `,
     methods: {
@@ -113,7 +139,7 @@ const RegisterForm = Vue.component('register-form', {
             })
             .then(function(jsonResponse) {
                 console.log(jsonResponse);
-                router.push('login')
+                router.push({path: '/login'})
             })
             .catch(function(error) {
                 console.log(error)
@@ -130,20 +156,22 @@ const RegisterForm = Vue.component('register-form', {
 
 const LoginForm = Vue.component('login-form', {
     template: `
-    <div>
-        <h1 class='mb-4'>Login</h1>
+    <div class="d-flex flex-column justify-content-center align-items-center">
+        <h1 class='mb-4 menu-title'>Login</h1>
+        <div class="shadow-sm bg-white p-4 rounded w-25">
         <form id="loginForm" @submit.prevent='loginUser' enctype='multipart/form-data' novalidate>
             <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" class="form-control" id="username" name="username">
+                <label for="username" class="font-weight-bold">Username</label>
+                <input type="text" class="form-control form-control-sm" id="username" name="username">
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password">
+            <div class="form-group mb-4">
+                <label for="password" class="font-weight-bold">Password</label>
+                <input type="password" class="form-control form-control-sm" id="password" name="password">
             </div>
             
-            <button type='submit' class='btn btn-primary'>Login</button>
+            <button type='submit' class='btn btn-sm btn-green font-weight-bold w-100 mt-2'>Login</button>
         </form>
+        </div>
     </div>
     `,
     methods: {
@@ -165,7 +193,7 @@ const LoginForm = Vue.component('login-form', {
             .then(function(jsonResponse) {
                 console.log(jsonResponse);
                 localStorage.setItem('token', jsonResponse.token);
-                router.push('explore')
+                router.push({path: '/explore'})
             })
             .catch(function(error) {
                 console.log(error)
@@ -181,20 +209,137 @@ const LoginForm = Vue.component('login-form', {
 })
 
 const Logout = Vue.component('logout', {
-    template: ``,
+    template: `<div></div>`,
     created: function () {
         localStorage.removeItem('token');
-        router.push('home')
+        router.push({path: '/'})
+    },
+})
+
+const PostHeader = Vue.component('post-header', {
+    template: `
+        <div class="bg-white rounded d-flex flex-row justify-content-start align-items-center post-header px-2">
+                <img :src=profileImgUrl class="post-maker-photo mr-1">
+            <router-link class="nav-link text-muted font-weight-bold" :to="profileUrl">
+                <p class="d-inline align-middle">{{ username }}</p>
+            </router-link>
+        </div>
+    `,
+    props: ['userId'],
+    created: function() {
+        // get the user profile photo and username based on the user id
+        let self = this;
+        
+        self.profileUrl = 'users/' + self.userId;
+        
+        fetch('/api/users/' + self.userId, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': token,
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            self.profileImgUrl ='static/uploads/' + data.profile_photo
+            self.username = data.username
+        })
+        .catch(function(error) {
+            console.log(error)
+        })  
+    },
+    data: function() {
+        return {
+            profileUrl: '',
+            profileImgUrl: '',
+            username: ''
+        }
+    }
+})
+
+const PostFooter = Vue.component('post-footer', {
+    template: `
+        <div class="d-flex flex-row justify-content-between p-3 bg-white">
+            <span class="font-weight-bold text-muted"><i class="far fa-heart" v-bind:class="{'post-liked': isLiked}" @click="likePost"></i> {{ likes }} Likes</span>
+            <span class="font-weight-bold text-muted">{{ date }}</span>
+        </div>
+    `,
+    props: ['postId', 'date'],
+    created: function() {
+        let self = this;
+        
+        fetch('/api/posts/' + self.postId + '/like', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': token,
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            self.likes = data.likes
+        })
+        .catch(function(error) {
+            console.log(error)
+        })  
+    },
+    methods: {
+        likePost: function() {
+            let jwt = localStorage.getItem('token');
+            let formData = new FormData();
+            let self = this;
+            
+            
+            formData.set('user_id', jwt_decode(jwt).id);
+            formData.set('post_id', self.postId);
+            
+            
+            fetch('/api/posts/' + self.postId + '/like', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': token,
+                    'Authorization': 'Bearer ' + jwt
+                },
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                console.log(data);
+                self.isLiked = true;
+                self.likes++;
+            })
+            .catch(function(error) {
+                console.log(error)
+            })  
+        }  
+    },
+    data: function() {
+        return {
+            isLiked: false,
+            likes: 0
+        }
     }
 })
 
 const Explore = Vue.component('explore', {
     template: `
-        <div>
-            <p>Explore page</p>
-            <ul>
-                <li v-for='post in posts'>
-                    {{ post }}
+        <div class="d-flex flex-row-reverse justify-content-around align-items-center">
+            <router-link class="nav-link align-self-start btn btn-sm btn-blue w-25 font-weight-bold" to="/posts/new">New Post</router-link>
+            <ul class="d-flex flex-column">
+                <li v-for='post in posts' class="shadow-sm rounded bg-white mb-4">
+                    <post-header v-bind:user-id="post.user_id"></post-header>
+                    <img :src="'static/uploads/' + post.photo" style="height: 400px; width: 500px;">
+                    <p class="p-3 bg-white text-muted">{{post.caption}}</p>
+                    <post-footer v-bind:post-id="post.id" v-bind:date="post.created_on"></post-footer>
                 </li>
             </ul>
         </div>
@@ -228,22 +373,169 @@ const Explore = Vue.component('explore', {
     }
 })
 
+const ProfileBanner = Vue.component('profile-banner', {
+    template: `
+        <div class="d-flex flex-row justify-content-between bg-white rounded shadow-sm p-3 mb-3">
+            <div class="d-flex justify-content-center align-items-center mr-2">
+                <img :src="'../static/uploads/' + user.profile_photo" class="profile-img">
+            </div>
+            <div class="d-flex flex-column">
+                <p class="font-weight-bold text-muted">{{ user.firstname }} {{ user.lastname }}</p>
+                <p class="text-muted">
+                {{ user.location }} <br>
+                Member since {{ user.joined_on }}
+                </p>
+                <p class="text-muted">{{ user.biography }} </p>
+            </div>
+            <div class="d-flex flex-column justify-content-between">
+                <div class="d-flex flex-row justify-content-between">
+                    <div class="d-flex flex-column justify-content-center align-items-center p-2">
+                        <span class="font-weight-bold text-muted">{{ posts }}</span>
+                        <p class="font-weight-bold text-muted">Posts</p>
+                    </div>
+                    <div class="d-flex flex-column justify-content-center align-items-center p-2">
+                        <span class="font-weight-bold text-muted">{{ followers }}</span>
+                        <p class="font-weight-bold text-muted">Followers</p>
+                    </div>
+                </div>
+                <button class="btn btn-sm font-weight-bold w-100"
+                    v-bind:class="{'btn-green': isFollowing, 'btn-blue': !isFollowing}" @click="followUser">
+                    <span v-if="isFollowing">Following</span>
+                    <span v-else>Follow</span>
+                </button>
+            </div>
+        </div>
+    `,
+    props: ['user', 'posts'],
+    created: function() {
+        let self = this;
+        
+        fetch('/api/users/' + self.user.id + '/follow', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': token,
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            self.followers = data.follower_count
+        })
+        .catch(function(error) {
+            console.log(error)
+        })  
+    },
+    methods: {
+        followUser: function() {
+            let self = this;
+            
+            let jwt = localStorage.getItem('token');
+            
+            let formData = new FormData();
+            formData.set('follower_id', jwt_decode(jwt).id);
+            
+            fetch('/api/users/' + self.user.id + '/follow', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': token,
+                    'Authorization': 'Bearer ' + jwt
+                },
+                credentials: 'same-origin'
+            })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                self.isFollowing = true;
+                self.followers++;
+            })
+            .catch(function(error) {
+                console.log(error)
+            }) 
+        }
+    },
+    data: function() {
+        return {
+            followers: 0,
+            isFollowing: false,
+        }
+    }
+})
+
+const ProfileGallery = Vue.component('profile-gallery', {
+    template: `
+        <ul class="gallery">
+            <li v-for="post in posts"
+                class="gallery-item"
+                style="max-width: 350px">
+                <img :src="'../static/uploads/' + post.photo" class="gallery-img">
+            </li>
+        </ul>
+    `,
+    props: ['posts'],
+    data: function() {
+        return {}
+    }
+})
+
+const UserProfile = Vue.component('user-profile', {
+    template: `
+    <div>
+        <profile-banner v-bind:user="user" v-bind:posts="user.posts.length"></profile-banner>
+        <profile-gallery v-bind:posts="user.posts"></profile-gallery>
+    </div>
+    `,
+    created: function() {
+        let self = this;
+        
+        fetch('/api/users/' + self.$route.params.user_id, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': token,
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            },
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            self.user = data;
+        })
+        .catch(function(error) {
+            console.log(error)
+        })
+    },
+    data: function() {
+        return {
+            user: {},
+        }
+    },
+})
+
 const NewPostForm = Vue.component('new-post-form', {
     template: `
-        <div>
+        <div class="d-flex flex-column justify-content-center align-items-center">
+            <h1 class='mb-4 menu-title'>New Post</h1>
+            <div class="shadow-sm bg-white p-4 rounded w-25">
             <form id="newPostForm" @submit.prevent='makePost' enctype='multipart/form-data' novalidate>
                 <div class='form-group'>
-                    <label for='photo'>Photo</label>
-                    <input type='file' id='photo' class='form-control file-input' name='photo'>
+                    <label for='photo' class="font-weight-bold">Photo</label>
+                    <input type='file' id='photo' class='form-control form-control-sm file-input' name='photo'>
                 </div>
                 
                 <div class='form-group'>
-                    <label for="caption">Caption</label>
-                    <textarea id="caption" class="form-control" name="caption"></textarea>
+                    <label for="caption" class="font-weight-bold">Caption</label>
+                    <textarea id="caption" class="form-control form-control-sm" name="caption">Write a Caption...</textarea>
                 </div>
                 
-                <button type='submit' class='btn btn-primary'>Submit</button>
+                <button type='submit' class='btn btn-sm btn-green w-100 font-weight-bold'>Submit</button>
             </form>
+            </div>
         </div>
     `,
     methods: {
@@ -268,7 +560,7 @@ const NewPostForm = Vue.component('new-post-form', {
             })
             .then(function(jsonResponse) {
                 console.log(jsonResponse);
-                router.push('explore');
+                router.push({path: '/explore'});
             })
             .catch(function(error) {
                 console.log(error)
@@ -304,6 +596,7 @@ const router = new VueRouter({
         {path: "/logout", component: Logout},
         {path: "/explore", component: Explore},
         {path: "/posts/new", component: NewPostForm},
+        {path: "/users/:user_id", component: UserProfile},
         // This is a catch all route in case none of the above matches
         {path: "*", component: NotFound}
     ]
