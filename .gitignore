@@ -11,3 +11,5 @@ venv/
 
 # PyCharm
 .idea
+
+app/static/uploads/*
