@@ -9,7 +9,7 @@ Vue.component('app-header', {
         <span class="navbar-toggler-icon"></span>
       </button>
     
-      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <div class="collapse navbar-collapse text-small" id="navbarSupportedContent">
         <ul class="navbar-nav ml-auto">
           <li class="nav-item active">
             <router-link class="nav-link font-weight-bold" to="/">Home <span class="sr-only">(current)</span></router-link>
@@ -125,7 +125,7 @@ const RegisterForm = Vue.component('register-form', {
                 <input type="text" class="form-control form-control-sm" id="location" name="location">
             </div>
             <div class='form-group'>
-                <label for="biography" class="font-weight-bold">Description</label>
+                <label for="biography" class="font-weight-bold">Biography</label>
                 <textarea id="biography" class="form-control form-control-sm" name="biography"></textarea>
             </div>
             
@@ -287,9 +287,9 @@ const Logout = Vue.component('logout', {
 const PostHeader = Vue.component('post-header', {
     template: `
         <div class="bg-white rounded d-flex flex-row justify-content-start align-items-center post-header px-2">
-                <img :src=profileImgUrl class="post-maker-photo mr-1">
+                <img :src=profileImgUrl class="post-maker-photo mr-1 rounded-circle">
             <router-link class="nav-link text-muted font-weight-bold" :to="profileUrl">
-                <p class="d-inline align-middle">{{ username }}</p>
+                <small class="d-inline align-middle font-weight-bold">{{ username }}</small>
             </router-link>
         </div>
     `,
@@ -331,31 +331,26 @@ const PostHeader = Vue.component('post-header', {
 const PostFooter = Vue.component('post-footer', {
     template: `
         <div class="d-flex flex-row justify-content-between p-3 bg-white">
-            <span class="font-weight-bold text-muted"><i class="far fa-heart" v-bind:class="{'post-liked': isLiked}" @click="likePost"></i> {{ likes }} Likes</span>
-            <span class="font-weight-bold text-muted">{{ date }}</span>
+            <small class="font-weight-bold text-muted">
+                <i class="far fa-heart" v-bind:class="classObject" @click="likePost"></i> 
+                {{ likes }} Likes
+            </small>
+            <small class="font-weight-bold text-muted">{{ date }}</small>
         </div>
     `,
-    props: ['postId', 'date'],
+    props: ['postId', 'date', 'numLikes', 'isAlreadyLiked'],
+    computed: {
+        classObject: function () {
+            return {
+                'post-liked': this.isAlreadyLiked || this.isLiked
+            }
+        }
+    },
     created: function() {
-        let self = this;
-        
-        fetch('/api/posts/' + self.postId + '/like', {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': token,
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
-            },
-            credentials: 'same-origin'
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            self.likes = data.likes
-        })
-        .catch(function(error) {
-            console.log(error)
-        })  
+      let self = this;
+      if (self.numLikes) {
+          self.likes = self.numLikes;
+      }
     },
     methods: {
         likePost: function() {
@@ -381,9 +376,10 @@ const PostFooter = Vue.component('post-footer', {
                 return response.json();
             })
             .then(function(data) {
-                console.log(data);
-                self.isLiked = true;
-                self.likes++;
+                if (data.message) {
+                    self.isLiked = true;
+                    self.likes++;
+                }
             })
             .catch(function(error) {
                 console.log(error)
@@ -406,11 +402,11 @@ const Explore = Vue.component('explore', {
                 <router-link class="nav-link align-self-start btn btn-sm btn-blue w-25 font-weight-bold" to="/posts/new">New Post</router-link>
                 <ul class="d-flex flex-column">
                     <div v-if="notification" class="alert alert-success alert-dismissible fade show">{{ notification }}</div>
-                    <li v-for='post in posts' class="shadow-sm rounded bg-white mb-4">
+                    <li v-for='post in posts' class="shadow-sm rounded bg-white mb-4" style="width: 500px;">
                         <post-header v-bind:user-id="post.user_id"></post-header>
-                        <img :src="'static/uploads/' + post.photo" style="height: 400px; width: 500px;">
-                        <p class="p-3 bg-white text-muted">{{post.caption}}</p>
-                        <post-footer v-bind:post-id="post.id" v-bind:date="post.created_on"></post-footer>
+                        <img :src="'static/uploads/' + post.photo" style="height: 400px; width: 500px;" class="img-fluid">
+                        <small class="d-inline-block p-3 bg-white text-muted w-100">{{ post.caption }}</small>
+                        <post-footer v-bind:is-already-liked="post.is_already_liked" v-bind:post-id="post.id" v-bind:date="post.created_on" v-bind:num-likes="post.num_likes"></post-footer>
                     </li>
                 </ul>
             </div>
@@ -452,59 +448,40 @@ const Explore = Vue.component('explore', {
 
 const ProfileBanner = Vue.component('profile-banner', {
     template: `
-        <div class="d-flex flex-row justify-content-between bg-white rounded shadow-sm p-3 mb-3">
-            <div class="d-flex justify-content-center align-items-center mr-2">
+        <div class="d-flex flex-row bg-white rounded shadow-sm p-3 mb-3">
+            <div class="d-flex justify-content-center align-items-center mr-4">
                 <img :src="'../static/uploads/' + user.profile_photo" class="profile-img">
             </div>
-            <div class="d-flex flex-column">
-                <p class="font-weight-bold text-muted">{{ user.firstname }} {{ user.lastname }}</p>
-                <p class="text-muted">
+            <div class="d-flex flex-column text-small ml-2">
+                <span class="font-weight-bold text-muted mb-3">{{ user.firstname }} {{ user.lastname }}</span>
+                <span class="text-muted mb-4">
                 {{ user.location }} <br>
                 Member since {{ user.joined_on }}
-                </p>
-                <p class="text-muted">{{ user.biography }} </p>
+                </span>
+                <span class="text-muted">{{ user.biography }} </span>
             </div>
-            <div class="d-flex flex-column justify-content-between">
+            <div class="d-flex flex-column justify-content-between ml-auto text-small">
                 <div class="d-flex flex-row justify-content-between">
                     <div class="d-flex flex-column justify-content-center align-items-center p-2">
-                        <span class="font-weight-bold text-muted">{{ posts }}</span>
+                        <span class="font-weight-bold text-muted">{{ user.num_posts }}</span>
                         <p class="font-weight-bold text-muted">Posts</p>
                     </div>
                     <div class="d-flex flex-column justify-content-center align-items-center p-2">
-                        <span class="font-weight-bold text-muted">{{ followers }}</span>
+                        <span class="font-weight-bold text-muted">{{ user.num_followers }}</span>
                         <p class="font-weight-bold text-muted">Followers</p>
                     </div>
                 </div>
-                <button class="btn btn-sm font-weight-bold w-100"
-                    v-bind:class="{'btn-green': isFollowing, 'btn-blue': !isFollowing}" @click="followUser">
-                    <span v-if="isFollowing">Following</span>
+                <button
+                    v-if="current_id != user.id"
+                    class="btn btn-sm font-weight-bold w-100"
+                    v-bind:class="classObject" @click="followUser">
+                    <span v-if="user.isFollowing || isFollowing">Following</span>
                     <span v-else>Follow</span>
                 </button>
             </div>
         </div>
     `,
-    props: ['user', 'posts'],
-    created: function() {
-        let self = this;
-        
-        fetch('/api/users/' + self.user.id + '/follow', {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': token,
-                'Authorization': 'Bearer ' + localStorage.getItem('token')
-            },
-            credentials: 'same-origin'
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            self.followers = data.follower_count
-        })
-        .catch(function(error) {
-            console.log(error)
-        })  
-    },
+    props: ['user'],
     methods: {
         followUser: function() {
             let self = this;
@@ -527,17 +504,27 @@ const ProfileBanner = Vue.component('profile-banner', {
                 return response.json();
             })
             .then(function(data) {
-                self.isFollowing = true;
-                self.followers++;
+                if (data.message) {
+                    self.isFollowing = true;
+                    self.user.num_followers++;
+                }
             })
             .catch(function(error) {
                 console.log(error)
             }) 
         }
     },
+    computed: {
+        classObject: function () {
+            return {
+                'btn-green': this.user.isFollowing || this.isFollowing,
+                'btn-blue': !this.user.isFollowing && !this.isFollowing
+            }
+        }
+    },
     data: function() {
         return {
-            followers: 0,
+            current_id: jwt_decode(localStorage.getItem('token')).id,
             isFollowing: false,
         }
     }
@@ -562,7 +549,7 @@ const ProfileGallery = Vue.component('profile-gallery', {
 const UserProfile = Vue.component('user-profile', {
     template: `
     <div>
-        <profile-banner v-bind:user="user" v-bind:posts="user.posts.length"></profile-banner>
+        <profile-banner v-bind:user="user"></profile-banner>
         <div class="d-flex justify-content-center align-items-center">
             <profile-gallery v-bind:posts="user.posts"></profile-gallery>
         </div>
@@ -583,6 +570,7 @@ const UserProfile = Vue.component('user-profile', {
             return response.json();
         })
         .then(function(data) {
+            console.log(data);
             self.user = data;
         })
         .catch(function(error) {
@@ -614,7 +602,7 @@ const NewPostForm = Vue.component('new-post-form', {
                 
                 <div class='form-group'>
                     <label for="caption" class="font-weight-bold">Caption</label>
-                    <textarea id="caption" class="form-control form-control-sm" name="caption">Write a Caption...</textarea>
+                    <textarea id="caption" class="form-control form-control-sm" name="caption" placeholder="Write a Caption..."></textarea>
                 </div>
                 
                 <button type='submit' class='btn btn-sm btn-green w-100 font-weight-bold'>Submit</button>

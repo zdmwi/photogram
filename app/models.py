@@ -52,6 +52,7 @@ class Post(db.Model):
 
 class Like(db.Model):
     __tablename__ = 'likes'
+    __table_args__ = (db.UniqueConstraint('user_id', 'post_id', name='_user_post_uc'), )
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
@@ -64,6 +65,7 @@ class Like(db.Model):
 
 class Follow(db.Model):
     __tablename__ = 'follows'
+    __table_args__ = (db.UniqueConstraint('user_id', 'follower_id', name='_user_follower_uc'), )
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)

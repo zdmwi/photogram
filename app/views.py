@@ -120,18 +120,24 @@ def logout():
 @app.route('/api/users/<user_id>', methods=['GET'])
 @login_required
 def get_user(user_id):
-    user = User.query.filter_by(id=user_id).first()
-    user_posts = Post.query.filter_by(user_id=user_id).all()
+    token = request.headers['Authorization'].split()[1]
+    requester_id = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])['id']
     
-    post_set = [{'id': post.id , 'user_id': post.user_id, 
-                'photo': post.photo, 'caption': post.caption, 
-                'created_on': post.created_on} for post in user_posts]
-                
+    user = User.query.filter_by(id=user_id).first()
+    
+    posts = [{'id': post.id , 'user_id': post.user_id, 
+                'photo': post.photo, 'caption': post.caption,
+                'num_likes': len(post.likes), 'created_on': post.created_on} for post in user.posts]
+    
+    followers = [follower.follower_id for follower in user.followers]
+    
     user_data = {'id': user.id, 'username': user.username, 
                 'firstname': user.firstname, 'lastname': user.lastname, 
                 'email': user.email, 'location': user.location, 
                 'biography': user.biography, 'profile_photo': user.profile_photo, 
-                'joined_on': user.joined_on.strftime('%B %Y'), 'posts': post_set}
+                'joined_on': user.joined_on.strftime('%B %Y'), 
+                'num_posts': len(posts), 'num_followers': len(user.followers), 
+                'posts': posts, 'isFollowing': requester_id in followers}
                 
     return jsonify(user_data), 200
 
@@ -162,73 +168,71 @@ def posts(user_id):
             
     else:
         posts = Post.query.filter_by(user_id=user_id).all()
-        response_set = [{'user_id': post.user_id, 'photo': post.photo, 'caption': post.caption} for post in posts]
+        response_set = [{'user_id': post.user_id, 'photo': post.photo, 'caption': post.caption} for post in posts][::-1]
         response = {'posts': response_set}, 200
         
     return jsonify(response[0]), response[1]
     
-@app.route('/api/users/<user_id>/follow', methods=['GET', 'POST'])
+@app.route('/api/users/<user_id>/follow', methods=['POST'])
 @login_required
 def follow(user_id):
-    if request.method == 'POST':
-        form = FollowForm()
+    form = FollowForm()
+    
+    if form.validate_on_submit():
+        follower_id = form.follower_id.data
         
-        if form.validate_on_submit():
-            follower_id = form.follower_id.data
-            
-            follow = Follow(user_id, follower_id)
-            
+        follow = Follow(user_id, follower_id)
+        
+        try:
             db.session.add(follow)
             db.session.commit()
-            
             response = {'message': 'You are now following that user.'}, 200
-        
-        else:
-            response = {'errors': form_errors(form)}, 400
+        except:
+            response = {'errors': ['You are already following that user.']}, 400
     else:
-        follows = Follow.query.filter_by(user_id=user_id).distinct().all()
-        
-        follow_count  = 0
-        for follow in follows:
-            follow_count += 1
-        
-        response = {'follower_count': follow_count}, 200
+        response = {'errors': form_errors(form)}, 400
         
     return jsonify(response[0]), response[1]
  
 @app.route('/api/posts', methods=['GET'])
 @login_required
 def all_posts():
+    token = request.headers['Authorization'].split()[1]
+    requester_id = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])['id']
+    
+    user = User.query.filter_by(id=requester_id).first()
+    
+    likes = [like.post_id for like in user.likes]
+    
     posts = Post.query.all()
     
     response_set = [{'id': post.id, 'user_id': post.user_id, 'photo': post.photo, 
-                    'caption': post.caption, 'created_on': post.created_on.strftime('%d %B %Y')} for post in posts]
+                    'caption': post.caption, 'num_likes': len(post.likes), 
+                    'is_already_liked': post.id in likes,'created_on': post.created_on.strftime('%d %B %Y')} for post in posts][::-1]
                     
     response = {'posts': response_set}
     return jsonify(response), 200
 
-@app.route('/api/posts/<post_id>/like', methods=['GET', 'POST'])
+@app.route('/api/posts/<post_id>/like', methods=['POST'])
 @login_required
 def likes(post_id):
-    if request.method == 'POST':
-        form = LikeForm()
+    form = LikeForm()
+    
+    if form.validate_on_submit():
+        user_id = form.user_id.data
         
-        if form.validate_on_submit():
-            user_id = form.user_id.data
-            
-            like = Like(user_id, post_id)
-            
+        like = Like(user_id, post_id)
+        
+        try:
             db.session.add(like)
             db.session.commit()
-            
             likes = Like.query.filter_by(post_id=post_id).all()
             response = {'message': 'Post liked!', 'likes': len(likes)}, 201
-            
-        else:
-            response = {'errors': form_errors(form)}, 400
+        except:
+            response = {'errors': ['Already liked post']}, 400
+        
     else:
-        likes = Like.query.filter_by(post_id=post_id).all()
-        response = {'likes': len(likes)}, 200
+        response = {'errors': form_errors(form)}, 400
         
     return jsonify(response[0]), response[1]
 
