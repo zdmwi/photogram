@@ -332,7 +332,7 @@ const PostFooter = Vue.component('post-footer', {
     template: `
         <div class="d-flex flex-row justify-content-between p-3 bg-white">
             <small class="font-weight-bold text-muted">
-                <i class="far fa-heart" v-bind:class="classObject" @click="likePost"></i> 
+                <i class="far fa-heart pseudo-link" v-bind:class="classObject" @click="likePost"></i> 
                 {{ likes }} Likes
             </small>
             <small class="font-weight-bold text-muted">{{ date }}</small>
